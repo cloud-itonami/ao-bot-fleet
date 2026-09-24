@@ -1,0 +1,26 @@
+{
+  "jobs": [
+    {
+      "base_url": "https://api.kotoba.cloud/v1",
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "231c4ac61441",
+      "model": "qwen3.8-flash-next-whitehacker",
+      "name": "model-health-tick",
+      "no_agent": true,
+      "prompt": "",
+      "provider": "kotoba",
+      "schedule": {
+        "kind": "cron",
+        "expr": "1 * * * *",
+        "display": "1 * * * *"
+      },
+      "script": "model_health.py",
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}

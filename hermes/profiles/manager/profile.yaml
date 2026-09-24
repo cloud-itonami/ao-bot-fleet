@@ -1,0 +1,12 @@
+description: maanger — 他の bot がちゃんと働いているか確認
+description_auto: false
+ui_meta:
+  hermes-bots:
+    shape: blobatar
+    color: '#f97316'
+    imageKind: shape
+    title: manager
+    created: 1788140642758
+    custom: true
+_ui_meta_revisions:
+  hermes-bots: 2

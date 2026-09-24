@@ -1,0 +1,5 @@
+description: 'Capability-model watch for the murakumo fleet: measures serving state
+  and freshness of image/video/music/tts/cua/vision model candidates in the
+  /infer/models catalog and HF availability of tier candidates, appends to an
+  append-only ledger. propose-only, no_agent script job.'
+description_auto: false

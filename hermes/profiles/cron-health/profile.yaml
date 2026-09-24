@@ -1,0 +1,2 @@
+description: 'cron-health: hourly Hermes bot cron fleet health auditor - scans all profiles, detects breaks. propose-only.'
+description_auto: false

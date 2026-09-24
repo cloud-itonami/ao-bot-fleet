@@ -1,0 +1,26 @@
+{
+  "jobs": [
+    {
+      "base_url": "https://api.kotoba.cloud/v1",
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "9e8961ac33a4",
+      "model": "qwen3.8-flash-next-whitehacker",
+      "name": "fleet-manifest-drift-watch",
+      "no_agent": true,
+      "prompt": "fleet-manifest drift watchdog",
+      "provider": "kotoba",
+      "schedule": {
+        "kind": "cron",
+        "expr": "11 * * * *",
+        "display": "11 * * * *"
+      },
+      "script": "fleet_manifest_drift_watch.sh",
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}

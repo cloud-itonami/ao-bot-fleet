@@ -1,0 +1,48 @@
+{
+  "jobs": [
+    {
+      "base_url": null,
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "7f4f1235638d",
+      "model": "qwen3.8-27b-whitehacker",
+      "name": "fleet-cron-watchdog",
+      "no_agent": false,
+      "prompt": "前の script 出力は fleet watchdog の測定である。問題列挙が空なら何もせず 'healthy' とだけ返す。問題がある場合のみ: SOUL.md の修復規律に従い provider-missing-key を修復し (hyakka-crawl の .env が正本)、script を再実行して解消を確認、修復した項目と残存項目を名指しで報告する。gateway restart は自分で実行しない (提案のみ)。",
+      "provider": "kotoba",
+      "schedule": {
+        "kind": "cron",
+        "expr": "5 3-23/12 * * *",
+        "display": "5 3-23/12 * * *"
+      },
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": "~/.hermes/profiles/fleet-watchdog"
+    },
+    {
+      "base_url": "https://api.kotoba.cloud/v1",
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "987302f0b43b",
+      "model": "qwen3.8-flash-next-whitehacker",
+      "name": "zombie-session-reaper",
+      "no_agent": true,
+      "prompt": "",
+      "provider": "kotoba",
+      "schedule": {
+        "kind": "cron",
+        "expr": "40 * * * *",
+        "display": "40 * * * *"
+      },
+      "script": "zombie-session-reaper.py",
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "jobs": [
+    {
+      "base_url": null,
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "78a6c380135d",
+      "model": null,
+      "name": "capability-watch-tick",
+      "no_agent": true,
+      "prompt": "",
+      "provider": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "13 */6 * * *",
+        "display": "13 */6 * * *"
+      },
+      "script": "capability_watch.py",
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "deliver": null,
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "60c2adc622e2",
+      "model": null,
+      "name": "cua-node-probe",
+      "no_agent": true,
+      "prompt": "",
+      "provider": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "37 4 * * *",
+        "display": "37 4 * * *"
+      },
+      "script": "cua_node_probe.py",
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}
