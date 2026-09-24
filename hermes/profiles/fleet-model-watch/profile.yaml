@@ -1,0 +1,4 @@
+description: 'Fleet model-assignment health monitor. Measures per-model ok-rate and
+  burn from scheduler logs, flags fault signatures (402/429/resolve-fail/dead-fallback)
+  and streak growth. Tier map: skill fleet-model-tier-assignment.'
+description_auto: false

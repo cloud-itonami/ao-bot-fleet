@@ -1,0 +1,10 @@
+description: codinator — 他のbotが適切に動いているかをメンテナンス
+description_auto: false
+ui_meta:
+  hermes-bots:
+    shape: circle
+    color: '#f97316'
+    imageKind: shape
+    title: codinator
+    created: 1787142384822
+    chat: 20260819_214536_1dd53a
