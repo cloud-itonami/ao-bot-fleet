@@ -29,11 +29,11 @@
       "enabled": true,
       "enabled_toolsets": null,
       "id": "e29f637c3e82",
-      "model": "qwen3.8-27b-whitehacker",
+      "model": "murakumo/free",
       "name": "cron-health-report",
       "no_agent": false,
       "prompt": "You are the cron-health reporter bot. Each tick:\n1. Run: python3 scripts/cron-health-audit.py  (this appends one measured line to ~/.hermes/profiles/cron-health/workspace/cron-health-ledger.jsonl and prints deltas).\n2. Read SOUL.md in this profile for the classification rules and the reporting format — follow it exactly. It tells you what counts as a real fault vs host load / spend-guard, and what you may not edit.\n3. Read the last two lines of ~/.hermes/profiles/cron-health/workspace/cron-health-ledger.jsonl. Report the single most important change between them (a streak that grew, load crossing the threshold, an error bucket that went up) as ONE finding, in the format SOUL.md specifies. If nothing changed, state '変化なし'.\nYou are propose-only and read-only on other profiles — you only write this profile's ledger via the script.",
-      "provider": "kotoba",
+      "provider": "murakumo",
       "schedule": {
         "kind": "cron",
         "expr": "20 0-23/12 * * *",

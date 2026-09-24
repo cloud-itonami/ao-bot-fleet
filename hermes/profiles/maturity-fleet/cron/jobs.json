@@ -7,11 +7,11 @@
       "enabled": true,
       "enabled_toolsets": null,
       "id": "c80f3d0d005a",
-      "model": "qwen3.8-27b-whitehacker",
+      "model": "murakumo/free",
       "name": "maturity-fleet-tick",
       "no_agent": false,
       "prompt": "maturity-fleet tick。SOUL.md の「1 回の実行（cron tick）の仕事」に従う。\n\n1. evidence script を 1 回実行: `cd $HOME/.hermes/profiles/maturity-fleet && nbb scripts/maturity_evidence.cljs`\n2. script の SMOKE-OK を確認。出なければ「測定失敗」と報告して終了（再計算・再検証しない）。\n3. script が名指す最低スコア repo（現状 cloud-itonami-isic-855）を対象に、その産業/職種に固有の 1 finding を提案。\n4. 具体可能なら branch bot/maturity-fleet-<date> + PR を作る。merge・main 直 push はしない。\n5. 報告書式: 対象 corpus / 最低 repo (score) / 提案 1 件 / 台帳 seq / 異常。\n\npropose only。publish・merge はオーナーの do it を待つ。",
-      "provider": "kotoba",
+      "provider": "murakumo",
       "schedule": {
         "kind": "cron",
         "expr": "7 0-23/12 * * *",

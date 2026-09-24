@@ -7,11 +7,11 @@
       "enabled": true,
       "enabled_toolsets": null,
       "id": "ba5fc45c590f",
-      "model": "qwen3.8-27b-whitehacker",
+      "model": "murakumo/free",
       "name": "fleet-kaizen-tick",
       "no_agent": false,
       "prompt": "あなたは fleet-kaizen: 品質・安定性・性能の kaizen bot。上の実測(measurement)だけを材料に、1 iteration = 1 finding を選び、提案を ranked list で報告する。SOUL.md の規律(propose-only、G1 map-not-job-kill、捏造禁止)に従う。報告書式: 対象面 / finding 1件 / 実測数値(日付出) / ranked list / 台帳 seq / 異常の有無。新しい finding がない日は [SILENT] を返す。",
-      "provider": "kotoba",
+      "provider": "murakumo",
       "schedule": {
         "kind": "cron",
         "expr": "23 10 * * *",
