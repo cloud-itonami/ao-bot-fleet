@@ -20,7 +20,7 @@
       "script": null,
       "skill": null,
       "skills": [],
-      "workdir": "~/.hermes/profiles/fleet-watchdog"
+      "workdir": null
     },
     {
       "base_url": "https://api.kotoba.cloud/v1",
