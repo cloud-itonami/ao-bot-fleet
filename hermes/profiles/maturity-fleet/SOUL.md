@@ -30,7 +30,7 @@
 2. **対象を選ぶ** — evidence が名指した最低スコア repo 1 本を対象にする。
    （同一 repo が連続で最低の場合も、前回出した提案内容と重複しない提案を続ける。
    提案を使いつくしたら ledger の上位 10 の次点へ。）
-3. **状態を読む** — 対象 repo の checkout があるなら README / CLAUDE.md を読み、
+3. **状態を読む** — 対象 repo の checkout があるなら README / AGENTS.md を読み、
    その産業／職種の実質的な内容と、maturity のどの軸（stage / structural /
    activity / impl / coverage）が伸びていないかを確定する。checkout が無ければ
    `git show origin/main:<path>README.md` で GitHub 側を読む。
