@@ -6,10 +6,22 @@ model:
   max_tokens: 8192
   context_length: 131072
 providers:
+  murakumo-local:
+    base_url: http://127.0.0.1:8095/v1
+    api_mode: chat_completions
+    models:
+      mishima:
+        context_length: 32768
+        max_tokens: 4096
+    stale_timeout_seconds: 600
+    request_timeout_seconds: 900
   murakumo:
     base_url: https://api.murakumo.cloud/v1
     api_mode: chat_completions
     models:
+      mishima:
+        context_length: 131072
+        max_tokens: 1024
       nex-n2.5-mini-uncensored:
         context_length: 65536
         max_tokens: 8192
@@ -48,6 +60,12 @@ providers:
       qwen3.8-flash-next-whitehacker:
         context_length: 131072
 fallback_providers:
+  - provider: murakumo-local
+    model: mishima
+    base_url: http://127.0.0.1:8095/v1
+  - provider: murakumo
+    model: mishima
+    base_url: https://api.murakumo.cloud/v1
   - provider: openrouter-free
     model: z-ai/glm-5.3-flash
     base_url: https://openrouter.ai/api/v1
@@ -126,8 +144,9 @@ moa:
 plugins:
   enabled: []
 gateway:
+  cron_only: true
   multiplex_profiles: true
-_config_version: 45
+_config_version: 46
 image_gen:
   provider: nous
 agent:
