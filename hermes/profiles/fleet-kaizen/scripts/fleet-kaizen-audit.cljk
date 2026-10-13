@@ -1,0 +1,216 @@
+;; fleet-kaizen-audit.cljk - quality/stability/performance kaizen measurement.
+;;
+;; Pre-run script (stdout is injected into the agent prompt). Reads ONLY real logs:
+;;   - each profile's cron/executions.db   (quality: status, error strings)
+;;   - each profile's state.db sessions    (performance, cost)
+;;   - fleet-alloc cron-econ-ledger.jsonl  (weekly trend)
+;;
+;; Acts (bounded, reversible): quarantine-dead-jobs PAUSES jobs of profiles that
+;; completed 0 runs in the window with >= QUARANTINE_MIN_FAILS failures. Pause only
+;; (enabled=false, paused_reason set) - never delete, never touch schedule/model/
+;; provider. Backs up jobs.json first, caps QUARANTINE_MAX per run, skips protected
+;; profiles, appends every action to the ledger. KAIZEN_ACT=0 or --dry-run disables.
+;;
+;; Hermes runs only .py/.sh as `script`, so fleet-kaizen-audit.sh execs this under kbb.
+;; sqlite is read in-process via node:sqlite (read-only); no other dependency.
+
+(require '[clojure.string :as str]
+         '["node:sqlite" :as sqlite]
+         '["node:fs" :as fs]
+         '["node:path" :as path]
+         '["node:os" :as os])
+
+(def profiles-dir (path/join (os/homedir) ".hermes" "profiles"))
+(defn env [k d] (or (aget js/process.env k) d))
+(def days (js/parseInt (env "KAIZEN_DAYS" "7")))
+(def top (js/parseInt (env "KAIZEN_TOP" "10")))
+(def self "fleet-kaizen")
+(def argv (vec (js->clj (.slice js/process.argv 2))))
+(def act? (and (not= "0" (env "KAIZEN_ACT" "1")) (not (some #{"--dry-run"} argv))))
+(def min-fails (js/parseInt (env "QUARANTINE_MIN_FAILS" "5")))
+(def max-pause (js/parseInt (env "QUARANTINE_MAX" "3")))
+;; monitors, repairers and anything touching money/identity stay human/watchdog-owned
+(def protected-names
+  ["fleet-" "manager" "cron-health" "codinator" "ao-" "x402" "itonami-maint"
+   "treasury" "payout" "ledger" "billing" "stripe" "kotoba-merger"])
+
+(defn protected? [p]
+  (boolean (some #(or (str/starts-with? p %) (str/includes? p %)) protected-names)))
+
+(defn sql
+  "Run one read-only query against db (in-process node:sqlite, no spawn);
+  returns a vector of row maps, or nil on error."
+  [db q]
+  (try
+    (let [conn (new (.-DatabaseSync sqlite) db #js {:readOnly true})]
+      (try
+        (vec (map #(js->clj (js/Object.assign #js {} %) :keywordize-keys true)
+                  (array-seq (.all (.prepare conn q)))))
+        (finally (.close conn))))
+    (catch :default _ nil)))
+
+(defn profile-dirs []
+  (->> (js->clj (fs/readdirSync profiles-dir))
+       sort
+       (remove #(or (= % self) (str/includes? % ".bak")))))
+
+(defn load-execs []
+  (into {}
+        (keep
+         (fn [d]
+           (let [db (path/join profiles-dir d "cron" "executions.db")]
+             (when (fs/existsSync db)
+               (let [win (str "datetime('now','-" days " days')")
+                     st  (sql db (str "SELECT status s, COUNT(*) c FROM executions"
+                                      " WHERE claimed_at > " win " GROUP BY status"))
+                     er  (sql db (str "SELECT substr(replace(replace(COALESCE(error,''),char(10),' '),char(13),' '),1,90) e, COUNT(*) c"
+                                      " FROM executions WHERE status='failed'"
+                                      " AND claimed_at > " win " AND error IS NOT NULL"
+                                      " GROUP BY e ORDER BY c DESC LIMIT 3"))]
+                 (when (seq st)
+                   [d {:status (into {} (map (juxt :s :c) st))
+                       :errors (mapv (juxt :e :c) er)}]))))))
+        (profile-dirs)))
+
+(defn load-sessions []
+  (let [since (- (/ (js/Date.now) 1000) (* days 86400))]
+    (into {}
+          (keep
+           (fn [d]
+             (let [db (path/join profiles-dir d "state.db")]
+               (when (fs/existsSync db)
+                 (let [r (first (sql db (str "SELECT COUNT(*) n,"
+                                             " SUM(input_tokens+output_tokens) tok,"
+                                             " SUM(estimated_cost_usd) cost,"
+                                             " AVG(CASE WHEN ended_at IS NOT NULL AND started_at IS NOT NULL"
+                                             "     THEN ended_at - started_at END) wall"
+                                             " FROM sessions WHERE source='cron'"
+                                             " AND started_at > " since)))]
+                   (when (and r (pos? (:n r)))
+                     [d {:tok (or (:tok r) 0) :cost (or (:cost r) 0.0)
+                         :wall (js/Math.round (or (:wall r) 0))}]))))))
+          (profile-dirs))))
+
+(defn load-trend []
+  (let [p (path/join profiles-dir "fleet-alloc" "workspace" "cron-econ-ledger.jsonl")]
+    (if (fs/existsSync p)
+      (->> (str/split-lines (str/trim (str (fs/readFileSync p "utf8"))))
+           (keep #(try (js->clj (js/JSON.parse %) :keywordize-keys true) (catch :default _ nil)))
+           (take-last 4))
+      [])))
+
+(defn ts-now [] (-> (js/Date.) .toISOString))
+(defn fmt0 [n] (.toLocaleString (js/Math.round n) "en-US"))
+(defn pct [x] (str (js/Math.round (* 100 x)) "%"))
+(defn usd [x] (str "$" (.toFixed x 2)))
+
+(defn quarantine-dead-jobs
+  "Pause (reversible) every enabled job of a profile with 0 completed and
+  >= min-fails failed runs in the window. Returns action records."
+  [execs]
+  (let [cands (->> execs
+                   (filter (fn [[p e]]
+                             (and (zero? (get-in e [:status "completed"] 0))
+                                  (>= (get-in e [:status "failed"] 0) min-fails)
+                                  (not (protected? p)))))
+                   (map (fn [[p e]] [(get-in e [:status "failed"]) p]))
+                   (sort-by first >)
+                   (take max-pause))]
+    (vec
+     (keep
+      (fn [[fails prof]]
+        (let [jp (path/join profiles-dir prof "cron" "jobs.json")]
+          (try
+            (let [m0   (.-mtimeMs (fs/statSync jp))
+                  raw  (str (fs/readFileSync jp "utf8"))
+                  data (js/JSON.parse raw)
+                  hit  (filterv #(.-enabled %) (array-seq (.-jobs data)))]
+              (when (seq hit)
+                (let [rec {:profile prof :fails fails
+                           :jobs (mapv #(.-name %) hit) :applied false}]
+                  (if-not act?
+                    rec
+                    (if (not= m0 (.-mtimeMs (fs/statSync jp)))
+                      (assoc rec :skipped "jobs.json changed during read")
+                      (let [stamp (str/replace (subs (ts-now) 0 19) #"[-:]" "")
+                            why   (str "fleet-kaizen: 0 completed / " fails
+                                       " failed in " days "d")]
+                        (fs/writeFileSync (str jp ".bak-kaizen-" stamp) raw)
+                        (doseq [j hit]
+                          (set! (.-enabled j) false)
+                          (set! (.-state j) "paused")
+                          (set! (.-paused_at j) (ts-now))
+                          (set! (.-paused_reason j) why))
+                        (let [tmp (str jp ".tmp-kaizen")]
+                          (fs/writeFileSync tmp (js/JSON.stringify data nil 2))
+                          (fs/renameSync tmp jp))
+                        (assoc rec :applied true)))))))
+            (catch :default ex
+              {:profile prof :error (subs (str (.-message ex)) 0 (min 120 (count (str (.-message ex))))) :applied false}))))
+      cands))))
+
+(defn main []
+  (let [execs  (load-execs)
+        sess   (load-sessions)
+        trend  (load-trend)
+        q      (->> execs
+                    (keep (fn [[p e]]
+                            (let [done (get-in e [:status "completed"] 0)
+                                  fail (get-in e [:status "failed"] 0)]
+                              (when (>= (+ done fail) 5)
+                                [(/ fail (+ done fail)) p done fail]))))
+                    (sort (fn [a b] (compare [(first b) (second b)] [(first a) (second a)]))))
+        errcls (reduce (fn [m [_ e]]
+                         (reduce (fn [m [err c]] (update m (subs err 0 (min 60 (count err))) (fnil + 0) c))
+                                 m (:errors e)))
+                       {} execs)
+        rows   (->> sess
+                    (map (fn [[p s]] [(:tok s) p s (get-in execs [p :status "completed"] 0)]))
+                    (sort-by first >))
+        out    (atom [(str "# fleet-kaizen measurement (last " days "d)")
+                      (str "measured-at: " (ts-now))
+                      ""
+                      "## quality: worst success rates (min 5 runs)"
+                      "profile | success | done/fail | top errors"])
+        emit   #(swap! out conj %)]
+    (doseq [[rate p done fail] (take top q)]
+      (emit (str p " | " (pct (- 1 rate)) " | " done "/" fail " | "
+                 (str/join "; " (map (fn [[e c]] (str (subs e 0 (min 50 (count e))) " x" c))
+                                     (get-in execs [p :errors]))))))
+    (emit "")
+    (emit "## stability: recurring error classes (fleet-wide)")
+    (doseq [[err c] (take top (sort-by val > errcls))]
+      (emit (str c " x " err)))
+    (emit "")
+    (emit "## performance: top token spend (tok/run where computable)")
+    (doseq [[tok p s done] (take top rows)]
+      (emit (str p " | " (fmt0 tok) " tok | " (usd (:cost s)) " | avg wall " (:wall s) "s |"
+                 (if (pos? done) (str " " (fmt0 (/ tok done)) "/run") " (no completed runs)"))))
+    (when (seq trend)
+      (emit "")
+      (emit "## weekly trend (fleet-alloc ledger)")
+      (doseq [t trend]
+        (emit (str (subs (.toISOString (js/Date. (* 1000 (:ts t)))) 0 10) ": "
+                   (fmt0 (:total_tok t)) " tok, " (usd (:cost t))))))
+    (let [acts (quarantine-dead-jobs execs)]
+      (emit "")
+      (emit (str "## actions taken (" (if act? "LIVE: paused, reversible" "DRY-RUN") ")"))
+      (if (seq acts)
+        (doseq [a acts] (emit (js/JSON.stringify (clj->js a))))
+        (emit "none"))
+      (println (str/join "\n" @out))
+      ;; append-only evidence ledger
+      (let [led (path/join profiles-dir self "workspace" "kaizen-ledger.jsonl")]
+        (fs/mkdirSync (path/dirname led) #js {:recursive true})
+        (fs/appendFileSync
+         led
+         (str (js/JSON.stringify
+               (clj->js {:ts (/ (js/Date.now) 1000) :days days :lang "cljk"
+                         :profiles_quality (count q) :profiles_perf (count sess)
+                         :top_quality (mapv (fn [[r p d f]] [p (/ (js/Math.round (* 1000 (- 1 r))) 1000) d f])
+                                            (take 5 q))
+                         :top_tok (mapv (fn [[t p _ _]] [p (js/Math.round t)]) (take 5 rows))
+                         :actions acts :act act?}))
+              "\n"))))))
+
+(main)

@@ -1,7 +1,7 @@
 # fleet-kaizen — 品質・安定性・性能の kaizen bot
 
 全 Hermes fleet (約 170 profile / 156 cron job) の**実測ログだけ**を材料に、
-品質・安定性・性能を測定し、1 iteration = 1 finding で改善を提案する bot。
+品質・安定性・性能を測定し、1 iteration = 1 finding の提案に加え、有界・可逆の自動隔離(pause)を実行する bot。
 
 ## 正本手順
 
@@ -17,7 +17,7 @@ skill `fleet-watchdog` の修復規律も参照(これは修復もするが、ka
 | 性能 | `state.db` session_model_usage + executions の started→finished | token/run、wall-clock/run、cost/run |
 | 経済 | `fleet-alloc/workspace/cron-econ-ledger.jsonl` (append-only) | 週次 token/コスト trend |
 
-## ループ(1 iteration = 1 finding、propose-only)
+## ループ(1 iteration = 1 finding + 有界の自動 pause)
 
 1. **observe** — 上記ログを SQL で読む。値はすべて日付付き実測。
 2. **evaluate** — 3 軸で採点:
@@ -25,15 +25,19 @@ skill `fleet-watchdog` の修復規律も参照(これは修復もするが、ka
    - 安定性 = 失敗の再現性 (同じ error 文字列の繰り返し回数)
    - 性能 = tok/run と wall-clock/run の週次変化
 3. **decide** — 「影響(失敗回数×cost/run)が最大の 1 件」を finding として選ぶ。
-   提案は ranked list に載せ、**job の edit/kill はしない**。
-4. **act** — propose まで。G1 map-not-job-kill。
+   提案は ranked list に載せる。
+4. **act** — audit スクリプト(kotoba: scripts/fleet-kaizen-audit.cljk、cron からは .sh shim 経由)が `## actions taken` に出力した pause だけが実行済み。
+   条件: 7日で completed=0 かつ failed>=5 の profile の enabled job を pause(enabled=false, paused_reason 付き)。
+   上限 1 run 3 件、jobs.json は事前に `.bak-kaizen-<ts>` へバックアップ、保護対象(fleet-*/itonami-maint/manager/cron-health/codinator/ao-*/x402/treasury/payout/ledger/billing/stripe)は対象外。
+   復旧は jobs.json の enabled を戻す(または bak を戻す)。delete / schedule・model・provider 変更は今も禁止(fleet-watchdog のみ)。
+   `## actions taken` に無い操作を行ったと報告しない。
 5. **record-evidence** — `~/.hermes/profiles/fleet-kaizen/workspace/kaizen-ledger.jsonl` に 1 行追記(append-only)。
 
 ## 絶対規則
 
 - 測れなかった測定を成功として報告しない。数値は全て出所付き実測。
 - append-only 台帳を手で編集しない。
-- job の schedule/model/provider は変更しない(fleet-watchdog だけが修復する)。
+- job の schedule/model/provider は変更しない・job を delete しない(pause のみ許可、fleet-watchdog だけが修復する)。
 - 1 run で 1 finding。全直しを狙わない。
 
 ## 報告書式
