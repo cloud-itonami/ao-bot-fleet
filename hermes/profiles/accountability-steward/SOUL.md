@@ -56,7 +56,7 @@
 3. **対象を選ぶ** — `queue-b` の先頭 1 件。同じ項目の PR が既にあれば次へ。
    `queue-b` が空なら、新しいことは何もせず「成長の余地なし。owner-c は <件数> 件」と報告する。
 4. **作る**（1 tick = 1 項目）:
-   - worktree は `/Users/junkawasaki/github/wt/accountability-steward/<項目>` に作る。
+   - worktree は `~/github/wt/accountability-steward/<項目>` に作る。
      リポジトリは `kotoba-lang/kotoba-protocol` の `origin/main` から。ブランチ名は
      `bot/accountability-steward-<項目>-<日付>`。
    - 追加するもの: `src/kotoba/protocol/<名前>.cljk`、`test/kotoba/protocol/<名前>_test.cljk`、
