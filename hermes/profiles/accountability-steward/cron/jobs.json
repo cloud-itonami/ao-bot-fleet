@@ -10,7 +10,7 @@
       "model": null,
       "name": "accountability-steward-tick",
       "no_agent": false,
-      "prompt": "accountability-steward tick。SOUL.md の「1 回の実行（cron tick）の仕事」に従う。\n\n1. evidence script を 1 回実行: `cd $HOME/.hermes/profiles/accountability-steward && python3 scripts/accountability_evidence.py`\n2. script の SMOKE-OK を確認。出なければ「測定失敗」と報告して終了（再計算・再検証しない）。\n3. 対象の選び方: ずれ（drift）→ ADR が main に無い → 最初の未完了の段階、の順で 1 件。\n4. 文書とずれの修正だけ branch bot/accountability-steward-<date> + PR を作ってよい。暗号・新機能・設計変更は提案文のみで PR を作らない。merge・main 直 push はしない。\n5. 報告書式: 進行 / ADR / ずれ / 提案 1 件 / 台帳 seq / 異常。\n\npropose only。L0 の不変条件を緩める提案は出さない。publish・merge はオーナーの do it を待つ。",
+      "prompt": "accountability-steward tick。SOUL.md の「1 回の実行（cron tick）の仕事」に従う。\n\n1. `cd $HOME/.hermes/profiles/accountability-steward && python3 scripts/accountability_evidence.py` を 1 回実行。SMOKE-OK が出なければ「測定失敗」と報告して終了（再計算しない）。\n2. PAUSE があれば新しい PR を作らず報告だけ。自分の未決の PR（関門が DENY したもの）を先に直す。\n3. queue-b の先頭 1 件を、worktree（/Users/junkawasaki/github/wt/accountability-steward/<項目>）で作る。純粋な代数のみ、既存ソースは変えない、暗号は注入、テストを通す。bot/accountability-steward-<項目>-<日付> ブランチで PR を作る。マージはしない（毎時の sweep が関門を通して行う）。\n4. owner-c は作らない・待たない。queue-b が空なら「成長の余地なし」と報告。\n5. workspace/lessons.jsonl に 1 行追記してから、SOUL.md の書式で報告。\n\n憲章（SOUL.md）を越える必要が出たら越えず、その項目を owner-c として報告する。",
       "provider": null,
       "schedule": {
         "kind": "cron",
@@ -18,6 +18,28 @@
         "display": "17 3 * * *"
       },
       "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "7a41c9e0b3d2",
+      "model": null,
+      "name": "accountability-steward-sweep",
+      "no_agent": true,
+      "prompt": "",
+      "provider": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "47 * * * *",
+        "display": "47 * * * *"
+      },
+      "script": "steward_sweep.py",
       "skill": null,
       "skills": [],
       "workdir": null

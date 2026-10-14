@@ -31,26 +31,33 @@ REPOS = {
 ADR_PATH = "docs/ADR-accountability-tiered-anonymity.md"
 PROTO = "src/kotoba/protocol/"
 
-# phase -> list of (label, repo, kind, arg) ; kind: file | grep (any non-doc,
-# non-test file in the repo, case-insensitive fixed string)
+# phase -> list of (label, repo, kind, arg, mode)
+#   kind: file | grep (any non-doc, non-test file in the repo, case-insensitive)
+#   mode: "-"  already part of the merged baseline
+#         "B"  additive pure algebra the bot may build and merge itself
+#              (gate class B: new src + new test files in kotoba-protocol)
+#         "C"  needs the owner: cryptographic primitives, existing code, other
+#              repos' source. The bot never builds these; it moves on.
 PHASES = [
-    ("R0", [("tier vocabulary + policy/profile schema", "protocol", "file", PROTO + "accountability.cljk"),
-            ("govern tier check", "protocol", "grep", "accountability/decide")]),
-    ("R1", [("pairwise DIDs", "protocol", "file", PROTO + "pairwise.cljk"),
-            ("policy composition", "protocol", "grep", "compose-policies"),
-            ("receipt visibility rule", "protocol", "grep", "receipt-visibility"),
-            ("messenger mailbox id", "messenger", "grep", "mailbox-id"),
-            ("server owner-only receipts", "server", "grep", "OwnerOnly")]),
-    ("R2", [("rate-limit token algebra", "protocol", "file", PROTO + "ratelimit.cljk"),
-            ("blind-signature issuer/verifier implementation", "server", "grep", "blind_rsa"),
-            ("gateway token check", "server", "grep", "ratelimit_token")]),
-    ("R3", [("BBS+ credentials", "protocol", "grep", "bbs"),
-            ("context nullifier", "protocol", "grep", "nullifier")]),
-    ("R4", [("RLN", "protocol", "grep", "rln"),
-            ("anonymous stake", "protocol", "grep", "forfeit")]),
-    ("R5", [("threshold escrow opening", "protocol", "grep", "threshold-escrow-open"),
-            ("transparency log", "protocol", "grep", "transparency-log"),
-            ("message franking", "messenger", "grep", "franking")]),
+    ("R0", [("tier vocabulary + policy/profile schema", "protocol", "file", PROTO + "accountability.cljk", "-"),
+            ("govern tier check", "protocol", "grep", "accountability/decide", "-")]),
+    ("R1", [("pairwise DIDs", "protocol", "file", PROTO + "pairwise.cljk", "-"),
+            ("policy composition", "protocol", "grep", "compose-policies", "-"),
+            ("receipt visibility rule", "protocol", "grep", "receipt-visibility", "-"),
+            ("messenger mailbox id", "messenger", "grep", "mailbox-id", "-"),
+            ("server owner-only receipts", "server", "grep", "OwnerOnly", "-")]),
+    ("R2", [("rate-limit token algebra", "protocol", "file", PROTO + "ratelimit.cljk", "-"),
+            ("blind-signature issuer/verifier implementation", "server", "grep", "blind_rsa", "C"),
+            ("gateway token check", "server", "grep", "ratelimit_token", "C")]),
+    ("R3", [("credential predicate algebra", "protocol", "file", PROTO + "credential.cljk", "B"),
+            ("context nullifier algebra", "protocol", "file", PROTO + "nullifier.cljk", "B"),
+            ("BBS+ selective-disclosure primitive", "protocol", "grep", "bbs", "C")]),
+    ("R4", [("RLN share-accounting algebra", "protocol", "file", PROTO + "rln.cljk", "B"),
+            ("anonymous stake and forfeiture algebra", "protocol", "file", PROTO + "stake.cljk", "B"),
+            ("RLN secret-recovery primitive", "protocol", "grep", "shamir", "C")]),
+    ("R5", [("transparency log chain algebra", "protocol", "file", PROTO + "translog.cljk", "B"),
+            ("threshold escrow opening", "protocol", "grep", "threshold-escrow-open", "C"),
+            ("message franking", "messenger", "grep", "franking", "C")]),
 ]
 
 
@@ -88,8 +95,9 @@ def read_file(repo, ref, path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=os.path.expanduser("~/github"))
-    ap.add_argument("--ledger", default=os.path.expanduser(
-        "~/.hermes/profiles/accountability-steward/workspace/ledger.jsonl"))
+    ap.add_argument("--ledger", default=os.path.join(
+        os.environ.get("STEWARD_WORK") or os.path.expanduser("~/.hermes/profiles/accountability-steward/workspace"),
+        "ledger.jsonl"))
     ap.add_argument("--no-ledger", action="store_true")
     a = ap.parse_args()
 
@@ -111,16 +119,21 @@ def main():
         out["adr"] = has_file(repo, ref, ADR_PATH)
         print(f"adr  {ADR_PATH}: {'present' if out['adr'] else 'MISSING on main'}")
 
+    queue_b, owner_c, awaiting = [], [], []
     print("--- phases")
     for name, checks in PHASES:
         done, missing = [], []
-        for label, rk, kind, arg in checks:
+        for label, rk, kind, arg, mode in checks:
             if rk not in ctx:
                 missing.append(f"{label} (repo unreadable)")
                 continue
             repo, ref = ctx[rk]
             ok = has_file(repo, ref, arg) if kind == "file" else has_grep(repo, ref, arg)
-            (done if ok else missing).append(label)
+            if ok:
+                done.append(label)
+            else:
+                missing.append(label)
+                {"B": queue_b, "C": owner_c}.get(mode, awaiting).append((name, label, arg if kind == "file" else None))
         status = "done" if not missing else ("partial" if done else "open")
         out["phases"][name] = {"status": status, "done": done, "missing": missing}
         print(f"{name}: {status}")
@@ -151,11 +164,32 @@ def main():
     order = ["R0", "R1", "R2", "R3", "R4", "R5"]
     nxt = next((p for p in order if out["phases"].get(p, {}).get("status") != "done"), None)
     print(f"--- next open phase: {nxt}")
+    print("--- awaiting a merge to main (baseline items; the bot does not redo them)")
+    for ph, label, _f in awaiting:
+        print(f"awaiting: {ph} {label}")
+    if not awaiting:
+        print("awaiting: none")
+    print("--- autonomous queue (class B: build it, open a bot PR, the gate merges it)")
+    for ph, label, f_ in queue_b:
+        print(f"queue-b: {ph} {label}  -> new file {f_} + test/kotoba/protocol/{os.path.basename(f_ or '').replace('.cljk', '_test.cljk')}")
+    if not queue_b:
+        print("queue-b: empty")
+    print("--- owner-only (class C: the bot does not build these, and does not wait for them)")
+    for ph, label, _f in owner_c:
+        print(f"owner-c: {ph} {label}")
+    work = os.environ.get("STEWARD_WORK") or os.path.expanduser("~/.hermes/profiles/accountability-steward/workspace")
+    pause = os.path.join(work, "PAUSE")
+    print(f"--- gate: PAUSE = {open(pause).read().strip() if os.path.exists(pause) else 'no'}")
+    gl = os.path.join(work, "gate-ledger.jsonl")
+    if os.path.exists(gl):
+        for line in open(gl).read().splitlines()[-5:]:
+            print(f"gate-event: {line[:200]}")
 
     row = {"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
            "adr_on_main": out["adr"],
            "phases": {k: v["status"] for k, v in out["phases"].items()},
-           "drift": len(out["drift"]), "next": nxt, "problems": problems}
+           "drift": len(out["drift"]), "next": nxt, "queue_b": [q[1] for q in queue_b],
+           "owner_c": [c[1] for c in owner_c], "problems": problems}
     seq = 0
     if not a.no_ledger:
         os.makedirs(os.path.dirname(a.ledger), exist_ok=True)
