@@ -3,7 +3,10 @@
 
 Read-only measurement of how far the accountability-tiered anonymity
 rollout has got, from each repository's remote `main` (git show / git grep;
-no network, no checkout, no writes except the append-only ledger).
+no checkout, no writes except the append-only ledger). It first runs a
+read-only `git fetch <remote> main`, which updates only the remote-tracking
+ref; if that fails the run says STALE and does not report SMOKE-OK, so an
+old picture is never mistaken for a current one.
 
 The agent never recomputes this. Prints SMOKE-OK as the last line only if
 every repository could be read; otherwise SMOKE-FAIL and a non-zero exit.
@@ -74,6 +77,17 @@ def main_ref(repo):
     return "origin/main" if "origin/main" in refs else sorted(refs)[0]
 
 
+def fetch_main(repo, ref):
+    """Refresh the remote-tracking ref. Returns an error string, or None."""
+    remote = ref.split("/", 1)[0]
+    try:
+        p = subprocess.run(["git", "-C", repo, "fetch", "--quiet", remote, "main"],
+                           capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        return "fetch timed out"
+    return None if p.returncode == 0 else (p.stderr.strip()[:120] or "fetch failed")
+
+
 def has_file(repo, ref, path):
     return git(repo, "cat-file", "-e", f"{ref}:{path}")[0] == 0
 
@@ -108,6 +122,10 @@ def main():
         if ref is None:
             problems.append(f"cannot read {path} (no checkout or no remote main)")
             continue
+        err = fetch_main(repo, ref)
+        if err:
+            problems.append(f"STALE {path}: {err}")
+            print(f"repo {path}: could not refresh ({err}); using the last fetched state")
         ctx[key] = (repo, ref)
         rc, d = git(repo, "log", "-1", "--format=%cs", ref)
         print(f"repo {path:34s} {ref:16s} last-commit {d.strip()}")
