@@ -22,6 +22,7 @@ sessions, memories, logs, caches, run state.
 
 | profile | description |
 |---|---|
+| `accountability-steward` | ADR-2610081200（説明責任を段階化した匿名性）の進行を毎日観測し、次に進めるべき1件を提案する propose-only bot |
 | `codinator` | codinator — 他のbotが適切に動いているかをメンテナンス |
 | `cron-health` | cron-health: hourly Hermes bot cron fleet health auditor - scans all profiles, detects breaks. propose-only. |
 | `fleet-capability-watch` | Capability-model watch for the murakumo fleet: measures serving state |
