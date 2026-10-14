@@ -1,0 +1,26 @@
+{
+  "jobs": [
+    {
+      "base_url": null,
+      "context_from": null,
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "d9ebb0ea5787",
+      "model": null,
+      "name": "accountability-steward-tick",
+      "no_agent": false,
+      "prompt": "accountability-steward tick。SOUL.md の「1 回の実行（cron tick）の仕事」に従う。\n\n1. evidence script を 1 回実行: `cd $HOME/.hermes/profiles/accountability-steward && python3 scripts/accountability_evidence.py`\n2. script の SMOKE-OK を確認。出なければ「測定失敗」と報告して終了（再計算・再検証しない）。\n3. 対象の選び方: ずれ（drift）→ ADR が main に無い → 最初の未完了の段階、の順で 1 件。\n4. 文書とずれの修正だけ branch bot/accountability-steward-<date> + PR を作ってよい。暗号・新機能・設計変更は提案文のみで PR を作らない。merge・main 直 push はしない。\n5. 報告書式: 進行 / ADR / ずれ / 提案 1 件 / 台帳 seq / 異常。\n\npropose only。L0 の不変条件を緩める提案は出さない。publish・merge はオーナーの do it を待つ。",
+      "provider": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "17 3 * * *",
+        "display": "17 3 * * *"
+      },
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}
