@@ -7,9 +7,9 @@ name: fleet-watchdog-ops
 ## 現行ポリシー (2026-10-16)
 
 - LLM inference must use Murakumo only. Do not route through local, Kotoba, OpenRouter, or OpenCode providers.
-- If a provider key is missing, report the profile name and key name only. Do not copy credentials between profile \`.env\` files or create a new credential file. Credential provisioning stays in the owner-managed secret path.
+- If a provider key is missing, report the profile name and key name only. Do not copy credentials between profile `.env` files or create a new credential file. Credential provisioning stays in the owner-managed secret path.
 - Before changing a cron route, confirm the destination is Murakumo and the model is currently listed. Historical OpenRouter pin commands below are records of past state, not current instructions.
-- Keep each profile's workdir set when its scripts use relative paths. Use Hermes' documented ${userHome} interpolation in MCP script arguments; a literal \`~\` passed to Node is not expanded.
+- Keep each profile's workdir set when its scripts use relative paths. Use Hermes' documented ${userHome} interpolation in MCP script arguments; a literal `~` passed to Node is not expanded.
 
 ## Historical observations (2026-09; informational, not active instructions)
 
