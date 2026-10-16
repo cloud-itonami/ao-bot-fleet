@@ -4,29 +4,14 @@ name: fleet-watchdog-ops
 
 # fleet-watchdog 運用メモ
 
-## 確立済みの手順 (2026-09-05 実測)
+## 現行ポリシー (2026-10-16)
 
-### provider-missing-key の修復
-- 正本: `~/.hermes/profiles/hyakka-crawl/.env` の `OPENROUTER_API_KEY`
-- 欠落 profile の `.env` に 1 行追記すればよい。
-- 実行手段: `python3 <script>` 経由。**inline `python3 -c` は Tirith にブロックされる**ので、
-  修復スクリプトを `scripts/fix_openrouter_keys.py` に書いてから実行する。
-  `terminal` への `.env` 直接リダイレクト (>>) も「dangerous overwrite」としてブロックされる。
-- 修復済みスクリプト: `~/.hermes/profiles/fleet-watchdog/scripts/fix_openrouter_keys.py`
-  （profiles リストを書き換えて再利用可）
-- 検証: `grep -L "^OPENROUTER_API_KEY=..*$" <各 .env>` で空行なら全員有key。
+- LLM inference must use Murakumo only. Do not route through local, Kotoba, OpenRouter, or OpenCode providers.
+- If a provider key is missing, report the profile name and key name only. Do not copy credentials between profile \`.env\` files or create a new credential file. Credential provisioning stays in the owner-managed secret path.
+- Before changing a cron route, confirm the destination is Murakumo and the model is currently listed. Historical OpenRouter pin commands below are records of past state, not current instructions.
+- Keep each profile's workdir set when its scripts use relative paths. Use Hermes' documented ${userHome} interpolation in MCP script arguments; a literal \`~\` passed to Node is not expanded.
 
-### drift_skip の pin 修復 (2026-09-05 実測)
-- jobs.json は default home (`~/.hermes/cron/jobs.json`) と各 profile の
-  `~/.hermes/profiles/<name>/cron/jobs.json` に分かれている。watchdog の
-  profile 名は **HERMES_HOME そのもの**。job が見つからない場合はまず
-  `grep -l <job_id> ~/.hermes/cron/jobs.json ~/.hermes/profiles/*/cron/jobs.json`
-  で所在を特定する。
-- pin 実行: `HERMES_HOME=<jobのあるhome> hermes cron edit <id> --provider openrouter-free --model z-ai/glm-5.3-flash`
-  (--profile ではなく HERMES_HOME 環境変数。`hermes --profile X` は効かない)。
-  **id は 12桁の full id を指定すること** (8桁 prefix だと Job not found)。
-- pin 後も `last_error` は次回 run まで残る (watchdog 出力は即座には消えない)。
-  jobs.json を直接読んで provider/model が入ったことを確認すれば修復済みと判断してよい。
+## Historical observations (2026-09; informational, not active instructions)
 
 ### 2026-09-05 05:09 JST 実測 (25件時点)
 - provider-missing-key: 0件 (全 .env に key 済み)。
