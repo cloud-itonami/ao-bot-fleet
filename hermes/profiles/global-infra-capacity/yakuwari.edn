@@ -1,0 +1,16 @@
+{:yakuwari/id :global-infra-capacity
+ :yakuwari/project "/Users/junkawasaki/.hermes/profiles/global-infra-capacity"
+ :yakuwari/objective "Measure and summarize world power, CPU, network, storage and GPU production, utilization, makers, history and outlook from public sources, and propose updates. Propose-only: nothing is published."
+ :yakuwari/scale {:min 1 :desired 1 :max 1}
+ :yakuwari/runners [{:runner :claude :weight 1}]
+ :yakuwari/capabilities
+ [{:capability :measure_public_data :decision :autonomous :note "read-only public HTTP via the profile evidence script only"}
+  {:capability :append_own_ledger :decision :autonomous :note "append-only ledger under this profile workspace"}
+  {:capability :research_public_web :decision :autonomous :note "read-only public research for outlook claims, recorded with source URL and date"}
+  {:capability :write_workspace_files :decision :autonomous :note "summary and claim files under this profile workspace only"}
+  {:capability :propose_source_additions :decision :approval-required :note "proposals go to workspace/proposals, owner decides"}
+  {:capability :publish :decision :blocked :note "no publishing anywhere"}
+  {:capability :external_write :decision :blocked :note "no posts, no mail, no external service writes"}
+  {:capability :git_write :decision :blocked :note "no commits, no pushes"}
+  {:capability :merge :decision :blocked :note "no merges"}
+  {:capability :approve :decision :blocked :note "no approvals"}]}

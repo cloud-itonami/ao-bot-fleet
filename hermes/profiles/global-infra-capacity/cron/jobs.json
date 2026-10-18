@@ -1,0 +1,85 @@
+{
+  "jobs": [
+    {
+      "last_status": null,
+      "failure_streak": 0,
+      "paused_at": null,
+      "paused_reason": null,
+      "skills": [],
+      "origin": null,
+      "model": null,
+      "no_agent": false,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "next_run_at": "2026-11-01T08:50:00+09:00",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "last_run_at": null,
+      "enabled": true,
+      "id": "71d0b1794cf8",
+      "provider": null,
+      "name": "global-infra-capacity-self-org-tick",
+      "schedule": {
+        "kind": "cron",
+        "expr": "50 8 1 * *",
+        "display": "50 8 1 * *"
+      },
+      "base_url": null,
+      "script": null,
+      "prompt": "You are the global-infra-capacity report bot. Read SOUL.md and follow it exactly. One job this run: read workspace/infra-capacity-ledger.jsonl, compare the latest record with the previous one, report ONE finding citing the ledger keys, and stop. If the latest record measured nothing, say the run was blind and stop without proposing anything.",
+      "monitor_url": null,
+      "monitor_script": null,
+      "state": "scheduled",
+      "context_from": null,
+      "created_at": "2026-10-18T20:16:30.592000+09:00",
+      "skill": null,
+      "last_delivery_error": null,
+      "last_error": null,
+      "deliver": "local",
+      "schedule_display": "50 8 1 * *"
+    },
+    {
+      "last_status": "ok",
+      "failure_streak": 0,
+      "paused_at": null,
+      "paused_reason": null,
+      "skills": [],
+      "origin": null,
+      "model": null,
+      "no_agent": true,
+      "enabled_toolsets": null,
+      "workdir": null,
+      "next_run_at": "2026-10-19T07:20:00+09:00",
+      "repeat": {
+        "times": null,
+        "completed": 1
+      },
+      "last_run_at": "2026-10-18T20:17:07.826000+09:00",
+      "enabled": true,
+      "id": "b76be6354c0d",
+      "provider": null,
+      "name": "infra-capacity-measure",
+      "schedule": {
+        "kind": "cron",
+        "expr": "20 7 * * 1",
+        "display": "20 7 * * 1"
+      },
+      "base_url": null,
+      "script": "infra_capacity_evidence.py",
+      "prompt": "no_agent measure job. script stdout is the report.",
+      "monitor_url": null,
+      "monitor_script": null,
+      "state": "scheduled",
+      "context_from": null,
+      "created_at": "2026-10-18T20:16:31.974000+09:00",
+      "skill": null,
+      "last_delivery_error": null,
+      "last_error": null,
+      "deliver": "local",
+      "schedule_display": "20 7 * * 1"
+    }
+  ],
+  "updated_at": "2026-10-18T20:17:15.310000+09:00"
+}
